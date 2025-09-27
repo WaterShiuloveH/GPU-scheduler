@@ -32,6 +32,9 @@ http://localhost:4000
 ### Create a Job
 ```js
 POST /jobs
+curl -X POST http://localhost:4000/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"name":"training", "resource":"A100"}'
 ```
 #### Request Body:
 ```json
