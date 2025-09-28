@@ -1,14 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import { api } from "../lib/api";
 import { useJobStore } from "../store/jobs";
 import JobForm from "../components/JobForm";
 
 export default function Home() {
-  const { jobs, setJobs } = useJobStore();
+  const { jobs, setJobs, updateJob } = useJobStore();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Initial fetch (in case socket connects late)
   async function fetchJobs() {
     try {
       setError(null);
@@ -24,9 +26,26 @@ export default function Home() {
   useEffect(() => {
     fetchJobs();
 
-    const interval = setInterval(fetchJobs, 5000);
-    return () => clearInterval(interval);
-  }, [setJobs]);
+    // Connect to backend socket
+    const socket = io("http://localhost:4000");
+
+    socket.on("connect", () => {
+      console.log("✅ Connected to WebSocket:", socket.id);
+    });
+
+    socket.on("jobUpdated", (job) => {
+      console.log("📡 Job update received:", job);
+      updateJob(job.id, job); // merge into Zustand
+    });
+
+    socket.on("disconnect", () => {
+      console.log("❌ Disconnected from WebSocket");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [setJobs, updateJob]);
 
   return (
     <main className="p-6 max-w-2xl mx-auto space-y-6">
