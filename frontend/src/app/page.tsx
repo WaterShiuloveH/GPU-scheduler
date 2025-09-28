@@ -6,7 +6,7 @@ import { useJobStore } from "../store/jobs";
 import JobForm from "../components/JobForm";
 
 export default function Home() {
-  const { jobs, setJobs, updateJob } = useJobStore();
+  const { jobs, setJobs, addJob, updateJob, addLog } = useJobStore();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,9 +33,25 @@ export default function Home() {
       console.log("✅ Connected to WebSocket:", socket.id);
     });
 
+    // 🆕 New job created
+    socket.on("jobCreated", (job) => {
+      console.log("🆕 Job created:", job);
+      addJob(job);
+    });
+
+    // 🔄 Job status update
     socket.on("jobUpdated", (job) => {
       console.log("📡 Job update received:", job);
-      updateJob(job.id, job); // merge into Zustand
+      updateJob(job.id, {
+        status: job.status,
+        updatedAt: job.updatedAt,
+      });
+    });
+
+    // 📜 Job logs
+    socket.on("jobLog", ({ jobId, log }) => {
+      console.log("📜 Log received:", log);
+      addLog(jobId, log);
     });
 
     socket.on("disconnect", () => {
@@ -45,7 +61,7 @@ export default function Home() {
     return () => {
       socket.disconnect();
     };
-  }, [setJobs, updateJob]);
+  }, [setJobs, addJob, updateJob, addLog]);
 
   return (
     <main className="p-6 max-w-2xl mx-auto space-y-6">
@@ -66,6 +82,13 @@ export default function Home() {
             {jobs.map((job) => (
               <li key={job.id} className="p-3 border rounded-md">
                 <strong>{job.name}</strong> — {job.status}
+                <ul className="mt-2 text-sm text-gray-600 space-y-1">
+                  {job.logs.map((line, i) => (
+                    <li key={i} className="font-mono">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
               </li>
             ))}
             {jobs.length === 0 && (

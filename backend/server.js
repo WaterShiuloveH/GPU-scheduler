@@ -37,17 +37,39 @@ app.post("/jobs", (req, res) => {
 
   // Simulate lifecycle
   setTimeout(() => {
+    if (job.status !== "PENDING") return; // avoid double-run
+
     job.status = "RUNNING";
-    job.logs.push("Job is running on fake GPU...");
+  
+    const logLine = "Job is running on fake GPU...";
+    if (job.logs[job.logs.length - 1] !== logLine) {
+      job.logs.push(logLine);
+    }
+  
     job.updatedAt = new Date();
+  
     io.emit("jobUpdated", job);
+    io.emit("jobLog", { jobId: job.id, log: "Started running on GPU..." });
   }, 2000);
 
   setTimeout(() => {
-    job.status = Math.random() > 0.2 ? "COMPLETED" : "FAILED";
-    job.logs.push(`Job ${job.status.toLowerCase()}.`);
-    job.updatedAt = new Date();
-    io.emit("jobUpdated", job);
+  // Don’t update if already in a terminal state
+  if (job.status === "COMPLETED" || job.status === "FAILED") return;
+
+  const success = Math.random() > 0.2;
+  job.status = success ? "COMPLETED" : "FAILED";
+
+  const logLine = `Job ${job.status.toLowerCase()}.`;
+
+  // Only push if it’s not already the last log
+  if (job.logs[job.logs.length - 1] !== logLine) {
+    job.logs.push(logLine);
+  }
+
+  job.updatedAt = new Date();
+
+  io.emit("jobUpdated", job);
+  io.emit("jobLog", { jobId: job.id, log: logLine });
   }, 5000);
 
   res.json(job);

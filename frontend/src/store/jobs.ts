@@ -6,6 +6,8 @@ type Job = {
   command: string;
   status: string;
   logs: string[];
+  createdAt: string | Date;
+  updatedAt: string | Date;
 };
 
 type JobStore = {
@@ -13,6 +15,7 @@ type JobStore = {
   setJobs: (jobs: Job[]) => void;
   addJob: (job: Job) => void;
   updateJob: (id: string, job: Partial<Job>) => void;
+  addLog: (id: string, log: string) => void;
 };
 
 export const useJobStore = create<JobStore>((set) => ({
@@ -22,5 +25,11 @@ export const useJobStore = create<JobStore>((set) => ({
   updateJob: (id, job) =>
     set((state) => ({
       jobs: state.jobs.map((j) => (j.id === id ? { ...j, ...job } : j)),
+    })),
+  addLog: (id, log) =>
+    set((state) => ({
+      jobs: state.jobs.map((j) =>
+        j.id === id ? { ...j, logs: [...j.logs, log] } : j
+      ),
     })),
 }));
